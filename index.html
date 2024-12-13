@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>휘매쓰 연산 챌린지!</title>
+    <!-- MathJax 라이브러리 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace; /* 세로셈을 위한 고정폭 글꼴 사용 */
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        #start-screen, #game-container, #game-over {
+            display: none;
+            padding: 50px;
+        }
+        #start-screen.active, #game-container.active, #game-over.active {
+            display: block;
+        }
+        h1 {
+            color: #343a40;
+            margin-bottom: 20px;
+        }
+        .difficulty-button {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 18px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .difficulty-button:hover {
+            background-color: #0056b3;
+        }
+        #energy-bar {
+            width: 80%;
+            height: 25px;
+            background-color: #dee2e6;
+            border-radius: 12.5px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+        #energy {
+            height: 100%;
+            background-color: #28a745;
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+        #stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #495057;
+        }
+        #question {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #343a40;
+            white-space: pre-wrap; /* 세로셈 줄바꿈 유지 */
+        }
+        #answer-container {
+            margin-bottom: 20px;
+        }
+        #answer-container input {
+            padding: 10px;
+            font-size: 18px;
+            width: 200px;
+            text-align: center;
+            border: 2px solid #6c757d;
+            border-radius: 8px;
+            margin-right: 10px;
+        }
+        #answer-container button {
+            padding: 10px 20px;
+            font-size: 18px;
+            color: #fff;
+            background-color: #6c757d;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #answer-container button:hover {
+            background-color: #5a6268;
+        }
+
+        .correct-answer-display {
+            font-size: 20px;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+
+        #game-over {
+            color: #dc3545;
+        }
+        #game-over button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #game-over button:hover {
+            background-color: #0056b3;
+        }
+        /* Popup 스타일 */
+        #popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+        }
+        #popup button {
+            margin-top: 20px;
+            padding: 8px 16px;
+            font-size: 14px;
+            color: #fff;
+            background-color: #ffc107;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #popup button:hover {
+            background-color: #e0a800;
+        }
+    </style>
+</head>
+<body>
+    <!-- 시작 화면 -->
+    <div id="start-screen" class="active">
+        <h1>휘매쓰 연산 챌린지!</h1>
+        <p>난이도를 선택하세요:</p>
+        <button class="difficulty-button" onclick="startGame('최상')">최상 (20초 시작)</button>
+        <button class="difficulty-button" onclick="startGame('상')">상 (30초 시작)</button>
+        <button class="difficulty-button" onclick="startGame('중')">중 (40초 시작)</button>
+        <button class="difficulty-button" onclick="startGame('하')">하 (시간 제한 없음)</button>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="game-container">
+        <div id="stats">
+            <div id="score-display">점수: 0</div>
+            <div id="lives-display">남은 기회: 3</div>
+            <div id="time-display">전체 게임 시간: 0초</div>
+        </div>
+        <div id="energy-bar">
+            <div id="energy"></div>
+        </div>
+        <div id="question"></div>
+        
+        <div id="answer-container">
+            <input type="text" id="answer-input" placeholder="정답 입력">
+            <button onclick="checkAnswer()">확인</button>
+        </div>
+        <div id="correct-answer-display" class="correct-answer-display"></div>
+    </div>
+
+    <!-- 게임 종료 화면 -->
+    <div id="game-over">
+        <h1>게임 종료!</h1>
+        <p id="final-score"></p>
+        <button onclick="restartGame()">다시 시작하기</button>
+    </div>
+
+    <!-- 팝업 -->
+    <div id="popup">
+        <p id="popup-message"></p>
+        <button onclick="closePopup()">닫기</button>
+    </div>
+
+    <script>
+        // 게임 상태 변수들
+        let score = 0;
+        let lives = 3;
+        let totalGameTime = 0;
+        let difficulty = '';
+        let timePerQuestion = 0;
+        let pointsPerQuestion = 0;
+        let energyWidth = 100;
+        let energyInterval = null;
+        let totalTimeInterval = null;
+        let shuffledQuestions = [];
+        let currentQuestion = {};
+        let rewardGiven = false; // 보상 여부
+        let acceptingAnswers = true; // 정답 입력 가능 상태
+
+        // 50문제
+        const questions = [
+            { question: "다음 세로셈의 결과는?\n\n   123\n ×  12\n──────", answer: "1476" },
+            { question: "다음 세로셈의 결과는?\n\n   256\n ×  23\n──────", answer: "5888" },
+            { question: "다음 세로셈의 결과는?\n\n   374\n ×  45\n──────", answer: "16830" },
+            { question: "다음 세로셈의 결과는?\n\n   482\n ×  34\n──────", answer: "16388" },
+            { question: "다음 세로셈의 결과는?\n\n   591\n ×  27\n──────", answer: "15957" },
+            { question: "다음 세로셈의 결과는?\n\n   638\n ×  16\n──────", answer: "10208" },
+            { question: "다음 세로셈의 결과는?\n\n   745\n ×  29\n──────", answer: "21605" },
+            { question: "다음 세로셈의 결과는?\n\n   859\n ×  31\n──────", answer: "26629" },
+            { question: "다음 세로셈의 결과는?\n\n   962\n ×  18\n──────", answer: "17316" },
+            { question: "다음 세로셈의 결과는?\n\n   175\n ×  24\n──────", answer: "4200" },
+
+            { question: "다음 세로셈의 결과는?\n\n   137\n ×  49\n──────", answer: "6713" },
+            { question: "다음 세로셈의 결과는?\n\n   248\n ×  56\n──────", answer: "13888" },
+            { question: "다음 세로셈의 결과는?\n\n   319\n ×  25\n──────", answer: "7975" },
+            { question: "다음 세로셈의 결과는?\n\n   427\n ×  33\n──────", answer: "14091" },
+            { question: "다음 세로셈의 결과는?\n\n   152\n ×  41\n──────", answer: "6232" },
+            { question: "다음 세로셈의 결과는?\n\n   693\n ×  27\n──────", answer: "18711" },
+            { question: "다음 세로셈의 결과는?\n\n   845\n ×  14\n──────", answer: "11830" },
+            { question: "다음 세로셈의 결과는?\n\n   927\n ×  23\n──────", answer: "21321" },
+            { question: "다음 세로셈의 결과는?\n\n   736\n ×  45\n──────", answer: "33120" },
+            { question: "다음 세로셈의 결과는?\n\n   452\n ×  39\n──────", answer: "17628" },
+
+            { question: "다음 세로셈의 결과는?\n\n   183\n ×  29\n──────", answer: "5307" },
+            { question: "다음 세로셈의 결과는?\n\n   624\n ×  16\n──────", answer: "9984" },
+            { question: "다음 세로셈의 결과는?\n\n   539\n ×  34\n──────", answer: "18326" },
+            { question: "다음 세로셈의 결과는?\n\n   718\n ×  25\n──────", answer: "17950" },
+            { question: "다음 세로셈의 결과는?\n\n   239\n ×  48\n──────", answer: "11472" },
+            { question: "다음 세로셈의 결과는?\n\n   654\n ×  21\n──────", answer: "13734" },
+            { question: "다음 세로셈의 결과는?\n\n   841\n ×  17\n──────", answer: "14297" },
+            { question: "다음 세로셈의 결과는?\n\n   957\n ×  12\n──────", answer: "11484" },
+            { question: "다음 세로셈의 결과는?\n\n   114\n ×  36\n──────", answer: "4104" },
+            { question: "다음 세로셈의 결과는?\n\n   333\n ×  33\n──────", answer: "10989" },
+
+            { question: "다음 세로셈의 결과는?\n\n   286\n ×  54\n──────", answer: "15444" },
+            { question: "다음 세로셈의 결과는?\n\n   745\n ×  40\n──────", answer: "29800" },
+            { question: "다음 세로셈의 결과는?\n\n   999\n ×  21\n──────", answer: "20979" },
+            { question: "다음 세로셈의 결과는?\n\n   412\n ×  36\n──────", answer: "14832" },
+            { question: "다음 세로셈의 결과는?\n\n   173\n ×  42\n──────", answer: "7266" },
+            { question: "다음 세로셈의 결과는?\n\n   581\n ×  25\n──────", answer: "14525" },
+            { question: "다음 세로셈의 결과는?\n\n   249\n ×  49\n──────", answer: "12201" },
+            { question: "다음 세로셈의 결과는?\n\n   444\n ×  44\n──────", answer: "19536" },
+            { question: "다음 세로셈의 결과는?\n\n   777\n ×  17\n──────", answer: "13209" },
+            { question: "다음 세로셈의 결과는?\n\n   925\n ×  16\n──────", answer: "14800" },
+
+            { question: "다음 세로셈의 결과는?\n\n   684\n ×  15\n──────", answer: "10260" },
+            { question: "다음 세로셈의 결과는?\n\n   319\n ×  29\n──────", answer: "9251" },
+            { question: "다음 세로셈의 결과는?\n\n   250\n ×  28\n──────", answer: "7000" },
+            { question: "다음 세로셈의 결과는?\n\n   725\n ×  24\n──────", answer: "17400" },
+            { question: "다음 세로셈의 결과는?\n\n   456\n ×  32\n──────", answer: "14592" },
+            { question: "다음 세로셈의 결과는?\n\n   642\n ×  19\n──────", answer: "12198" },
+            { question: "다음 세로셈의 결과는?\n\n   834\n ×  22\n──────", answer: "18348" },
+            { question: "다음 세로셈의 결과는?\n\n   193\n ×  15\n──────", answer: "2895" },
+            { question: "다음 세로셈의 결과는?\n\n   410\n ×  25\n──────", answer: "10250" },
+            { question: "다음 세로셈의 결과는?\n\n   527\n ×  27\n──────", answer: "14229" }
+        ];
+
+        // 보상 확률 설정
+        const rewards = [
+            { chance: 1/10000, message: "축하합니다! 5000원 상품권을 받으셨습니다!" },
+            { chance: 1/1000, message: "축하합니다! 3000원 상품권을 받으셨습니다!" },
+            { chance: 1/500, message: "축하합니다! 1회 면제권을 받으셨습니다!" }
+        ];
+
+        // 게임 시작 함수
+        function startGame(selectedDifficulty) {
+            difficulty = selectedDifficulty;
+            document.getElementById('start-screen').classList.remove('active');
+            document.getElementById('game-container').classList.add('active');
+
+            // 난이도별 설정
+            switch(difficulty) {
+                case '최상':
+                    timePerQuestion = 20;
+                    pointsPerQuestion = 20;
+                    break;
+                case '상':
+                    timePerQuestion = 30;
+                    pointsPerQuestion = 15;
+                    break;
+                case '중':
+                    timePerQuestion = 40;
+                    pointsPerQuestion = 13;
+                    break;
+                case '하':
+                    timePerQuestion = 0; // 시간 제한 없음
+                    pointsPerQuestion = 10;
+                    break;
+            }
+
+            if(difficulty !== '하') {
+                document.getElementById('energy-bar').style.display = 'block';
+                energyWidth = 100;
+                updateEnergyBar();
+                startEnergyBar();
+            } else {
+                document.getElementById('energy-bar').style.display = 'none';
+            }
+
+            // 게임 타이머 시작
+            startGameTimer();
+
+            // 질문 섞기
+            shuffledQuestions = shuffleArray([...questions]);
+
+            // 초기 점수와 생명 설정
+            score = 0;
+            lives = 3;
+            totalGameTime = 0;
+            updateStats();
+
+            // 첫 질문 로드
+            loadNextQuestion();
+        }
+
+        // 게임 타이머
+        function startGameTimer() {
+            totalTimeInterval = setInterval(function() {
+                totalGameTime += 1;
+                document.getElementById('time-display').innerText = '전체 게임 시간: ' + totalGameTime + '초';
+            }, 1000);
+        }
+
+        // 에너지 바 시작
+        function startEnergyBar() {
+            clearInterval(energyInterval);
+            energyInterval = setInterval(function() {
+                if(timePerQuestion > 0) {
+                    energyWidth -= (100 / (timePerQuestion * 10)); // 0.1초마다 감소
+                    if(energyWidth <= 0) {
+                        energyWidth = 0;
+                        lives -= 1;
+                        if(lives <= 0) {
+                            showCorrectAnswer();
+                            endGame();
+                        } else {
+                            document.getElementById('lives-display').innerText = '남은 기회: ' + lives;
+                            showCorrectAnswer();
+                            setTimeout(loadNextQuestion, 1000);
+                        }
+                    }
+                    updateEnergyBar();
+                }
+            }, 100);
+        }
+
+        // 에너지 바 업데이트
+        function updateEnergyBar() {
+            document.getElementById('energy').style.width = energyWidth + '%';
+            if(energyWidth > 60) {
+                document.getElementById('energy').style.backgroundColor = '#28a745';
+            } else if(energyWidth > 30) {
+                document.getElementById('energy').style.backgroundColor = '#ffc107';
+            } else {
+                document.getElementById('energy').style.backgroundColor = '#dc3545';
+            }
+        }
+
+        // 질문 로드 함수
+        function loadNextQuestion() {
+            acceptingAnswers = true;
+            document.getElementById('correct-answer-display').innerText = '';
+            document.getElementById('answer-input').value = '';
+            document.getElementById('answer-input').disabled = false;
+
+            if(shuffledQuestions.length === 0) {
+                // 모든 문제를 다 풀었으면 다시 섞기
+                shuffledQuestions = shuffleArray([...questions]);
+            }
+
+            currentQuestionIndex = Math.floor(Math.random() * shuffledQuestions.length);
+            currentQuestion = shuffledQuestions[currentQuestionIndex];
+            shuffledQuestions.splice(currentQuestionIndex,1); // 중복 방지
+
+            // 질문 표시
+            document.getElementById('question').innerText = currentQuestion.question;
+
+            // 에너지 바 리셋
+            if(difficulty !== '하') {
+                energyWidth = 100;
+                updateEnergyBar();
+                clearInterval(energyInterval);
+                startEnergyBar();
+            }
+        }
+
+        // 정답 확인 함수
+        function checkAnswer() {
+            if(!acceptingAnswers) return;
+            acceptingAnswers = false;
+
+            const userAnswer = document.getElementById('answer-input').value.trim();
+            document.getElementById('answer-input').disabled = true;
+
+            if(userAnswer === currentQuestion.answer) {
+                // 정답
+                score += pointsPerQuestion;
+                document.getElementById('score-display').innerText = '점수: ' + score;
+                checkReward();
+                setTimeout(loadNextQuestion, 1000);
+            } else {
+                // 오답
+                lives -= 1;
+                showCorrectAnswer();
+                if(lives <= 0) {
+                    endGame();
+                } else {
+                    document.getElementById('lives-display').innerText = '남은 기회: ' + lives;
+                    setTimeout(loadNextQuestion, 1000);
+                }
+            }
+
+            updateStats();
+        }
+
+        // 정답 표시 함수
+        function showCorrectAnswer() {
+            document.getElementById('correct-answer-display').innerText = `정답: ${currentQuestion.answer}`;
+        }
+
+        // 게임 종료 함수
+        function endGame() {
+            clearInterval(energyInterval);
+            clearInterval(totalTimeInterval);
+            document.getElementById('game-container').classList.remove('active');
+            document.getElementById('game-over').classList.add('active');
+            document.getElementById('final-score').innerText = '최종 점수: ' + score;
+        }
+
+        // 게임 재시작 함수
+        function restartGame() {
+            document.getElementById('game-over').classList.remove('active');
+            document.getElementById('start-screen').classList.add('active');
+            rewardGiven = false;
+        }
+
+        // 통계 업데이트 함수
+        function updateStats() {
+            document.getElementById('score-display').innerText = '점수: ' + score;
+            document.getElementById('lives-display').innerText = '남은 기회: ' + lives;
+            document.getElementById('time-display').innerText = '전체 게임 시간: ' + totalGameTime + '초';
+        }
+
+        // 배열 섞기 함수
+        function shuffleArray(array) {
+            for(let i = array.length - 1; i > 0; i--){
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 보상 확인 함수
+        function checkReward() {
+            if(rewardGiven) return; // 이미 보상을 받았다면 종료
+            let rand = Math.random();
+            let cumulative = 0;
+            for(let reward of rewards) {
+                cumulative += reward.chance;
+                if(rand < cumulative) {
+                    showPopup(reward.message);
+                    rewardGiven = true;
+                    break;
+                }
+            }
+        }
+
+        // 팝업 표시 함수
+        function showPopup(message) {
+            document.getElementById('popup-message').innerText = message;
+            document.getElementById('popup').style.display = 'block';
+        }
+
+        // 팝업 닫기 함수
+        function closePopup() {
+            document.getElementById('popup').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
